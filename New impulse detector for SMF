@@ -1,0 +1,76 @@
+% A New impulse detector for switching median filters
+% IEEE signal processing letters vol 9 no.11 Nov 2002
+% Program implemented by R.Sudhakar on 29-9-2015
+% 3 X 3 window size only results can be compared with SMF
+clc;
+clear all;
+close all;
+% a=imread('C:\Users\admin\Desktop\5.2.10.tiff');
+%  a=imread('C:\Users\admin\Desktop\Impulse_noise\Saltandpeppernoise\standard_test_images\standard_test_images\lena_gray_512.tif');
+a=imread('cameraman.tif');
+b=imnoise(a,'salt & pepper',0.6);
+[r,c]=size(b);
+LH=[zeros(1,5);zeros(1,5);-1,-1,4,-1,-1;zeros(1,5);zeros(1,5)];
+LV=[zeros(1,5)',zeros(1,5)',[-1,-1,4,-1,-1]',zeros(1,5)',zeros(1,5)'];
+LDP=[-1,0,0,0,0;0,-1,0,0,0;0,0,4,0,0;0,0,0,-1,0;0,0,0,0,-1];
+LDN=[0,0,0,0,-1;0,0,0,-1,0;0,0,4,0,0;0,-1,0,0,0;-1,0,0,0,0];
+% b1=b;
+% b2=[b1(1,:);b1;b1(r,:)];
+% b3=[b2(:,1),b2,b2(:,c)];
+
+b1=b;
+b2=[b1(r,:);b1;b1(1,:)];
+b3=[b2(:,1),b2,b2(:,c)];
+[nr,nc]=size(b3);
+for i=2:nr-1
+   for j=2:nc-1
+      e=sort([b3(i,j),b3(i-1,j-1),b3(i-1,j),b3(i-1,j+1),b3(i,j-1),b3(i,j+1),b3(i+1,j-1),b3(i+1,j),b3(i+1,j+1)],'ascend');     
+     b3(i,j)=e(round(9/2));
+   end
+end
+b3(1,:)=[];
+b3(nr-1,:)=[];
+b3(:,1)=[];
+b3(:,nc-1)=[];
+r1=conv2(b,LH,'same');
+r2=conv2(b,LV,'same');
+r3=conv2(b,LDP,'same');
+r4=conv2(b,LDN,'same');
+x=min(abs(r1),abs(r2));
+y=min(x,abs(r3));
+z=min(y,abs(r4));
+ T=0:200;
+%  T=20;
+for k=1:length(T)
+for i=1:r
+    for j=1:c
+    if (z(i,j)>T(k));
+        alpha(i,j)=1;
+        y(i,j)=b3(i,j);
+   else
+        alpha(i,j)=0;
+        y(i,j)=b(i,j);
+    end
+end
+end
+a=double(a);
+y=double(y);
+mse(k)=sum(sum((abs(a-y)).^2));
+mse(k)=mse(k)/(r*c);
+end
+figure,imshow(b);
+title('Noisy Image')
+figure,imshow(b3);
+title('Standard Median filter output for 3 X 3 Window');
+figure,imshow(alpha);
+title('Noisy pixels')
+figure,imshow(uint8(y));
+title('A New impulse detector for switching median filters for 3 X 3 window');
+% figure,imshow(uint8(z));
+b3=double(b3);
+mse1=sum(sum((abs(a-b3)).^2));
+mse1=mse1/(r*c)
+figure,plot(T,mse)
+xlabel('Threshold')
+ylabel('Mean Square error');
+title('Performance of Impulse detector for different thresholds');
